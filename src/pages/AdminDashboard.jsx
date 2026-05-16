@@ -48,12 +48,19 @@ export default function AdminDashboard() {
     };
 
     // Filter users (excluding admins)
-    const patientList = (users || []).filter(u => u.role !== 'admin' && (
-        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.surname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.username?.includes(searchTerm) ||
-        u.phone?.includes(searchTerm)
-    ));
+    const patientList = (users || []).filter(u => {
+        if (u.role === 'admin') return false;
+        
+        const term = searchTerm?.toLowerCase() || '';
+        if (!term) return true;
+
+        const nameMatch = u.name?.toLowerCase().includes(term);
+        const surnameMatch = u.surname?.toLowerCase().includes(term);
+        const usernameMatch = u.username?.includes(term);
+        const phoneMatch = u.phone?.includes(term);
+
+        return nameMatch || surnameMatch || usernameMatch || phoneMatch;
+    });
 
     return (
         <div className="min-h-screen bg-slate-50">
