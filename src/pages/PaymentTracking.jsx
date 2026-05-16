@@ -167,31 +167,7 @@ export default function PaymentTracking() {
                                                 </div>
                                             </div>
 
-                                            {/* Paid Checkbox */}
-                                            <div
-                                                onClick={() => handleStatusChange(item.id, 'isPaid')}
-                                                className={`
-                                                    flex items-center gap-3 px-4 py-2 rounded-xl border transition-all cursor-pointer select-none
-                                                    ${status.isPaid
-                                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                                        : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
-                                                    }
-                                                    ${!isAdminView ? 'pointer-events-none' : ''}
-                                                `}
-                                            >
-                                                <div className={`
-                                                    w-5 h-5 rounded border flex items-center justify-center transition-colors
-                                                    ${status.isPaid ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-300'}
-                                                `}>
-                                                    {status.isPaid && <Check className="w-3 h-3 text-white" />}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-medium">Ödendi</span>
-                                                    {status.isPaid && (
-                                                        <span className="text-[10px] opacity-75">{formatDate(status.isPaidDate)}</span>
-                                                    )}
-                                                </div>
-                                            </div>
+
                                         </div>
                                     </div>
                                 );
