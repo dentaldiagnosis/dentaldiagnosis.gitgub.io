@@ -14,9 +14,7 @@ export default function Landing() {
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">
                     Dental Diagnostik Asistanı
                 </h1>
-                <p className="text-sm text-slate-500 font-medium mb-8 uppercase tracking-wide">
-                    Powered by Diş Dünyası
-                </p>
+
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                     <Link
