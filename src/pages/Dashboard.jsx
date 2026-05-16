@@ -105,8 +105,8 @@ export default function Dashboard() {
                                 <CreditCard className="w-6 h-6 text-green-600 group-hover:text-white transition-colors" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-slate-800 group-hover:text-green-600 transition-colors">Ödeme Takip</h3>
-                                <p className="text-sm text-slate-500">Ödeme ve işlem geçmişinizi görüntüleyin</p>
+                                <h3 className="font-bold text-slate-800 group-hover:text-green-600 transition-colors">İşlem Takip</h3>
+                                <p className="text-sm text-slate-500">İşlem geçmişinizi görüntüleyin</p>
                             </div>
                         </div>
                         <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-green-600 transition-colors" />

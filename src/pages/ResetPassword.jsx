@@ -8,7 +8,7 @@ export default function ResetPassword() {
     const [searchParams] = useSearchParams();
     const { resetPassword } = useAuth();
 
-    const phone = searchParams.get('phone');
+    const username = searchParams.get('username');
 
     const [passwords, setPasswords] = useState({
         newPassword: '',
@@ -18,10 +18,10 @@ export default function ResetPassword() {
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        if (!phone) {
+        if (!username) {
             setError('Geçersiz sıfırlama bağlantısı.');
         }
-    }, [phone]);
+    }, [username]);
 
     const handleChange = (e) => {
         setPasswords({ ...passwords, [e.target.name]: e.target.value });
@@ -37,7 +37,7 @@ export default function ResetPassword() {
         }
 
         try {
-            resetPassword(phone, passwords.newPassword);
+            resetPassword(username, passwords.newPassword);
             setSuccess(true);
             setTimeout(() => {
                 navigate('/giris');
@@ -47,7 +47,7 @@ export default function ResetPassword() {
         }
     };
 
-    if (!phone) {
+    if (!username) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md border border-slate-100 text-center">

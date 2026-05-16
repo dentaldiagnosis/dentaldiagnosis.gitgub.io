@@ -20,11 +20,11 @@ export default function Login() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         try {
-            const user = login(formData.identifier, formData.password);
+            const user = await login(formData.identifier, formData.password);
 
             if (user.role === 'admin') {
                 navigate('/admin-dashboard');
@@ -32,7 +32,12 @@ export default function Login() {
                 navigate('/dashboard');
             }
         } catch (err) {
-            setError(err.message);
+            if (err.message === 'USER_AUTO_DELETED') {
+                // Silent redirect to register
+                navigate('/kayit', { state: { phone: formData.identifier, autoDeleted: true } });
+            } else {
+                setError(err.message);
+            }
         }
     };
 
@@ -54,13 +59,14 @@ export default function Login() {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Telefon Numarası</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Adı</label>
                         <input
                             required
                             type="text"
                             name="identifier"
                             value={formData.identifier}
                             onChange={handleChange}
+                            placeholder="Örn: 20260501"
                             className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                         />
                     </div>
@@ -91,6 +97,9 @@ export default function Login() {
                         Giriş Yap
                     </button>
                 </form>
+                <div className="mt-4 text-center text-xs text-slate-400">
+                    v1.1
+                </div>
             </div>
         </div>
     );

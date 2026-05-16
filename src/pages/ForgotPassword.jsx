@@ -5,7 +5,7 @@ import { KeyRound, ArrowLeft, Mail } from 'lucide-react';
 
 export default function ForgotPassword() {
     const { requestPasswordReset } = useAuth();
-    const [phone, setPhone] = useState('');
+    const [username, setUsername] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
 
@@ -15,7 +15,7 @@ export default function ForgotPassword() {
         setSuccess(false);
 
         try {
-            requestPasswordReset(phone);
+            requestPasswordReset(username);
             setSuccess(true);
         } catch (err) {
             setError(err.message);
@@ -61,17 +61,17 @@ export default function ForgotPassword() {
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <p className="text-slate-600 text-sm">
-                            Hesabınıza kayıtlı telefon numarasını girin. Size şifrenizi sıfırlamanız için bir bağlantı göndereceğiz.
+                            Kullanıcı adınızı girin. Size şifrenizi sıfırlamanız için bir bağlantı göndereceğiz.
                         </p>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Telefon Numarası</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Kullanıcı Adı</label>
                             <input
                                 required
-                                type="tel"
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                placeholder="0555 555 55 55"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                placeholder="Örn: 20260501"
                                 className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                             />
                         </div>

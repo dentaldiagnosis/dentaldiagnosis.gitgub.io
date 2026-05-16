@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Check, ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { KVKK_TEXT, CONSENT_TEXT } from '../data/consentTexts';
+import dentalChartImage from '../assets/dental-chart.jpg';
 
 const SYSTEMIC_DISEASES = [
     "Diyabet",
@@ -13,6 +14,7 @@ const SYSTEMIC_DISEASES = [
     "Astım/KOAH",
     "Romatizmal hastalık",
     "Kanser",
+    "Diğer",
     "Yok"
 ];
 
@@ -87,6 +89,10 @@ const DISEASE_DETAILS = {
             "Tedavi tamamlandı",
             "Takip aşamasındayım"
         ]
+    },
+    "Diğer": {
+        type: "text_only",
+        inputLabel: "Rahatsızlığınızı belirtiniz"
     }
 };
 
@@ -97,11 +103,12 @@ const ALLERGIES = [
     "Ürtiker",
     "Gıda alerjisi",
     "Anafilaksi (alerjik şok)",
-    "Diğer"
+    "Diğer",
+    "Yok"
 ];
 
 const QUADRANTS = [
-    { id: "sag_ust", label: "Sağ Üst", position: "top-0 left-0" }, // Adjust positioning classes as needed
+    { id: "sag_ust", label: "Sağ Üst", position: "top-0 left-0" },
     { id: "sol_ust", label: "Sol Üst", position: "top-0 right-0" },
     { id: "sag_alt", label: "Sağ Alt", position: "bottom-0 left-0" },
     { id: "sol_alt", label: "Sol Alt", position: "bottom-0 right-0" }
@@ -116,7 +123,8 @@ const DENTAL_CONDITIONS = [
     "temizlik",
     "gece ağrısı",
     "sızlama",
-    "apse"
+    "apse",
+    "Diğer"
 ];
 
 export default function Diagnosis() {
@@ -127,7 +135,7 @@ export default function Diagnosis() {
     // Check if we are in edit mode (passed from Profile)
     const initialData = location.state?.initialData;
     const initialStep = location.state?.initialStep || 1;
-    const targetPhone = location.state?.targetPhone;
+    const targetUsername = location.state?.targetUsername;
 
     const [currentStep, setCurrentStep] = useState(initialStep);
     const [answers, setAnswers] = useState(() => {
@@ -150,16 +158,15 @@ export default function Diagnosis() {
                 relatedToDiseases: [],
                 otherMedsDetails: '',
                 isRelatedSelected: false,
-                isOtherSelected: false
+                isOtherSelected: false,
+                isNoneSelected: false
             },
             quadrants: [],
             quadrantConditions: {},
             consents: {
                 kvkkApproved: false,
                 dentalConsentApproved: false,
-                tckn: user?.tckn || '',
-                dataSharingChoice: '',
-                handwrittenConfirmation: ''
+                dataSharingChoice: ''
             }
         };
     });
@@ -212,16 +219,24 @@ export default function Diagnosis() {
     const handleAllergyToggle = (allergy) => {
         setAnswers(prev => {
             const currentAllergies = prev.allergies;
-            let newAllergies;
 
-            if (currentAllergies.includes(allergy)) {
-                newAllergies = currentAllergies.filter(a => a !== allergy);
-                // If "Diğer" is deselected, clear the details
+            if (allergy === "Yok") {
+                return {
+                    ...prev,
+                    allergies: currentAllergies.includes("Yok") ? [] : ["Yok"],
+                    otherAllergyDetails: '' // Clear details
+                };
+            }
+
+            let newAllergies = currentAllergies.filter(a => a !== "Yok"); // Uncheck Yok if other selected
+
+            if (newAllergies.includes(allergy)) {
+                newAllergies = newAllergies.filter(a => a !== allergy);
                 if (allergy === "Diğer") {
                     return { ...prev, allergies: newAllergies, otherAllergyDetails: '' };
                 }
             } else {
-                newAllergies = [...currentAllergies, allergy];
+                newAllergies = [...newAllergies, allergy];
             }
 
             return { ...prev, allergies: newAllergies };
@@ -236,7 +251,7 @@ export default function Diagnosis() {
                     medications: {
                         ...prev.medications,
                         isRelatedSelected: !prev.medications.isRelatedSelected,
-                        relatedToDiseases: !prev.medications.isRelatedSelected ? [] : prev.medications.relatedToDiseases // Clear if unchecking? Or keep? Let's clear for clarity.
+                        relatedToDiseases: !prev.medications.isRelatedSelected ? [] : prev.medications.relatedToDiseases
                     }
                 };
             } else if (type === 'other') {
@@ -245,7 +260,20 @@ export default function Diagnosis() {
                     medications: {
                         ...prev.medications,
                         isOtherSelected: !prev.medications.isOtherSelected,
-                        otherMedsDetails: !prev.medications.isOtherSelected ? '' : prev.medications.otherMedsDetails
+                        otherMedsDetails: !prev.medications.isOtherSelected ? '' : prev.medications.otherMedsDetails,
+                        isNoneSelected: false // Deselect None if Other is selected
+                    }
+                };
+            } else if (type === 'none') {
+                return {
+                    ...prev,
+                    medications: {
+                        ...prev.medications,
+                        isNoneSelected: !prev.medications.isNoneSelected,
+                        isRelatedSelected: false, // Deselect others if None is selected
+                        isOtherSelected: false,
+                        relatedToDiseases: [],
+                        otherMedsDetails: ''
                     }
                 };
             }
@@ -365,23 +393,10 @@ export default function Diagnosis() {
                 return;
             }
 
-            // Save TCKN to user profile if not already set or updated
-            if (answers.consents.tckn) {
-                if (targetPhone) {
-                    // If admin is editing, update specific user's TCKN
-                    const targetUser = users.find(u => u.phone === targetPhone);
-                    if (targetUser) {
-                        updateSpecificUser(targetPhone, { tckn: answers.consents.tckn });
-                    }
-                } else {
-                    updateUser({ tckn: answers.consents.tckn });
-                }
-            }
-
             // Save Diagnosis Data
-            if (targetPhone) {
+            if (targetUsername) {
                 // Admin saving for a specific user
-                const targetUser = users.find(u => u.phone === targetPhone);
+                const targetUser = users.find(u => u.username === targetUsername || u.phone === targetUsername);
                 if (targetUser) {
                     const newDiagnosis = {
                         id: Date.now(),
@@ -391,9 +406,9 @@ export default function Diagnosis() {
                     const currentDiagnoses = targetUser.diagnoses || [];
                     const updatedDiagnoses = [...currentDiagnoses, newDiagnosis];
 
-                    updateSpecificUser(targetPhone, { diagnoses: updatedDiagnoses });
+                    updateSpecificUser(targetUsername, { diagnoses: updatedDiagnoses });
                     alert("Teşhis kaydı başarıyla güncellendi! Admin paneline yönlendiriliyorsunuz.");
-                    navigate(`/admin/profile/${targetPhone}`);
+                    navigate(`/admin/profile/${targetUsername}`);
                 }
             } else {
                 // Regular user saving
@@ -408,9 +423,9 @@ export default function Diagnosis() {
         if (currentStep > 1) {
             setCurrentStep(prev => prev - 1);
         } else {
-            if (targetPhone) {
+            if (targetUsername) {
                 // If admin is editing, go back to patient profile in admin view
-                navigate(`/admin/profile/${targetPhone}`);
+                navigate(`/admin/profile/${targetUsername}`);
             } else {
                 // Regular user goes back to dashboard
                 navigate('/dashboard');
@@ -481,49 +496,66 @@ export default function Diagnosis() {
                                     </h3>
 
                                     <div className="space-y-3">
-                                        {config.options.map((option) => {
-                                            const isSelected = config.type === 'radio'
-                                                ? answers.diseaseDetails[disease]?.selection === option
-                                                : answers.diseaseDetails[disease]?.selections?.includes(option);
-
-                                            return (
-                                                <label
-                                                    key={option}
-                                                    className={`
-                            flex items-center p-3 rounded-lg border cursor-pointer transition-all
-                            ${isSelected
-                                                            ? 'border-blue-500 bg-blue-50'
-                                                            : 'border-slate-200 hover:bg-slate-50'
-                                                        }
-                          `}
-                                                >
-                                                    <input
-                                                        type={config.type}
-                                                        name={disease}
-                                                        value={option}
-                                                        checked={isSelected || false}
-                                                        onChange={() => handleDetailChange(disease, option, config.type)}
-                                                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
-                                                    />
-                                                    <span className="ml-3 text-slate-700">{option}</span>
-                                                </label>
-                                            );
-                                        })}
-
-                                        {/* Special Input for Diabetes */}
-                                        {config.hasInput && answers.diseaseDetails[disease]?.selection && (
-                                            <div className="mt-4 pl-4 border-l-2 border-blue-100 animate-fade-in">
+                                        {config.type === 'text_only' ? (
+                                            <div className="animate-fade-in">
                                                 <label className="block text-sm font-medium text-slate-700 mb-1">
                                                     {config.inputLabel}
                                                 </label>
-                                                <input
-                                                    type={config.inputType}
+                                                <textarea
                                                     value={answers.diseaseDetails[disease]?.inputValue || ''}
                                                     onChange={(e) => handleDetailChange(disease, e.target.value, 'input')}
-                                                    placeholder="Örn: 6.5"
-                                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                                                    placeholder="Detayları yazınız..."
+                                                    rows={3}
+                                                    className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
                                                 />
                                             </div>
+                                        ) : (
+                                            <>
+                                                {config.options.map((option) => {
+                                                    const isSelected = config.type === 'radio'
+                                                        ? answers.diseaseDetails[disease]?.selection === option
+                                                        : answers.diseaseDetails[disease]?.selections?.includes(option);
+
+                                                    return (
+                                                        <label
+                                                            key={option}
+                                                            className={`
+                                    flex items-center p-3 rounded-lg border cursor-pointer transition-all
+                                    ${isSelected
+                                                                    ? 'border-blue-500 bg-blue-50'
+                                                                    : 'border-slate-200 hover:bg-slate-50'
+                                                                }
+                                  `}
+                                                        >
+                                                            <input
+                                                                type={config.type}
+                                                                name={disease}
+                                                                value={option}
+                                                                checked={isSelected || false}
+                                                                onChange={() => handleDetailChange(disease, option, config.type)}
+                                                                className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                                            />
+                                                            <span className="ml-3 text-slate-700">{option}</span>
+                                                        </label>
+                                                    );
+                                                })}
+
+                                                {/* Special Input for Diabetes */}
+                                                {config.hasInput && answers.diseaseDetails[disease]?.selection && (
+                                                    <div className="mt-4 pl-4 border-l-2 border-blue-100 animate-fade-in">
+                                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                                            {config.inputLabel}
+                                                        </label>
+                                                        <input
+                                                            type={config.inputType}
+                                                            value={answers.diseaseDetails[disease]?.inputValue || ''}
+                                                            onChange={(e) => handleDetailChange(disease, e.target.value, 'input')}
+                                                            placeholder="Örn: 6.5"
+                                                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -656,6 +688,25 @@ export default function Diagnosis() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Option 3: None */}
+                            <div className={`
+                                border-2 rounded-xl p-4 transition-all duration-200
+                                ${answers.medications.isNoneSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-white'}
+                            `}>
+                                <button
+                                    onClick={() => handleMedicationMainToggle('none')}
+                                    className="flex items-center w-full text-left"
+                                >
+                                    <div className={`
+                                        w-6 h-6 rounded-full border-2 flex items-center justify-center mr-3
+                                        ${answers.medications.isNoneSelected ? 'border-blue-600 bg-blue-600' : 'border-slate-300'}
+                                    `}>
+                                        {answers.medications.isNoneSelected && <Check className="w-4 h-4 text-white" />}
+                                    </div>
+                                    <span className="font-medium text-slate-800">Yok</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -666,13 +717,13 @@ export default function Diagnosis() {
                             Problem yaşadığınız bölgeyi işaretleyiniz
                         </h2>
 
-                        <div className="flex flex-col lg:flex-row gap-8 items-start">
+                        <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
                             {/* Left Side: Dental Chart */}
-                            <div className="relative max-w-sm mx-auto lg:mx-0 flex-shrink-0 group cursor-pointer">
+                            <div className="relative w-full max-w-md mx-auto lg:mx-0 flex-shrink-0 group cursor-pointer">
                                 <img
-                                    src="/dental-chart.jpg"
+                                    src={dentalChartImage}
                                     alt="Dental Chart"
-                                    className="w-full h-auto rounded-xl shadow-md border border-slate-200 select-none"
+                                    className="w-full h-auto rounded-xl shadow-md border border-slate-200 select-none block"
                                 />
 
                                 {/* Clickable Grid Overlay */}
@@ -799,8 +850,8 @@ export default function Diagnosis() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="h-full flex items-center justify-center p-8 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 text-center">
-                                        <p>Detayları görmek için soldaki şemadan bölge seçiniz.</p>
+                                    <div className="h-full flex items-center justify-center p-8 bg-slate-50 rounded-2xl border border-slate-200 border-dashed text-slate-400 text-center">
+                                        <p>Lütfen görsel üzerinden problem yaşadığınız bölgeleri seçiniz.</p>
                                     </div>
                                 )}
                             </div>
@@ -814,69 +865,123 @@ export default function Diagnosis() {
                             Onam Formları
                         </h2>
 
-                        <div className="space-y-4">
-                            {/* KVKK Consent */}
-                            <div className="flex items-center p-4 border-2 border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition-colors">
-                                <div className={`
-                                    w-6 h-6 rounded border-2 flex items-center justify-center mr-4 flex-shrink-0
-                                    ${answers.consents.kvkkApproved ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-slate-100'}
-                                `}>
-                                    {answers.consents.kvkkApproved && <Check className="w-4 h-4 text-white" />}
+                        {/* KVKK Consent */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div className="flex items-start gap-4">
+                                <input
+                                    type="checkbox"
+                                    id="kvkk"
+                                    checked={answers.consents.kvkkApproved}
+                                    readOnly
+                                    disabled
+                                    className="mt-1 w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 opacity-50 cursor-not-allowed"
+                                />
+                                <div>
+                                    <label htmlFor="kvkk" className="font-medium text-slate-800 cursor-pointer">
+                                        KVKK Aydınlatma Metni'ni okudum ve onaylıyorum.
+                                    </label>
+                                    <button
+                                        onClick={() => setActiveModal('kvkk')}
+                                        className="text-blue-600 text-sm hover:underline ml-2"
+                                    >
+                                        Metni Görüntüle
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setActiveModal('kvkk')}
-                                    className="text-left text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                                >
-                                    Kişisel Verilerin Koruma Kanunu Kapsamında Aydınlatma Metni
-                                </button>
-                            </div>
-
-                            {/* Dental Procedure Consent */}
-                            <div className="flex items-center p-4 border-2 border-slate-200 rounded-xl bg-white hover:bg-slate-50 transition-colors">
-                                <div className={`
-                                    w-6 h-6 rounded border-2 flex items-center justify-center mr-4 flex-shrink-0
-                                    ${answers.consents.dentalConsentApproved ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-slate-100'}
-                                `}>
-                                    {answers.consents.dentalConsentApproved && <Check className="w-4 h-4 text-white" />}
-                                </div>
-                                <button
-                                    onClick={() => setActiveModal('consent')}
-                                    className="text-left text-blue-600 hover:text-blue-800 hover:underline font-medium"
-                                >
-                                    Dental İşlem Onam Formu
-                                </button>
                             </div>
                         </div>
+
+                        {/* Dental Consent */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <div className="flex items-start gap-4">
+                                <input
+                                    type="checkbox"
+                                    id="dental"
+                                    checked={answers.consents.dentalConsentApproved}
+                                    readOnly
+                                    disabled
+                                    className="mt-1 w-5 h-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 opacity-50 cursor-not-allowed"
+                                />
+                                <div>
+                                    <label htmlFor="dental" className="font-medium text-slate-800 cursor-pointer">
+                                        Diş Hekimliği Onam Formu'nu okudum ve onaylıyorum.
+                                    </label>
+                                    <button
+                                        onClick={() => setActiveModal('consent')}
+                                        className="text-blue-600 text-sm hover:underline ml-2"
+                                    >
+                                        Metni Görüntüle
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Data Sharing Choice */}
+                        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                            <h3 className="font-medium text-slate-800 mb-4">
+                                Verilerimin bilimsel çalışmalarda anonim olarak kullanılmasına:
+                            </h3>
+                            <div className="space-y-3">
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="dataSharing"
+                                        value="yes"
+                                        checked={answers.consents.dataSharingChoice === 'yes'}
+                                        onChange={(e) => setAnswers(prev => ({
+                                            ...prev,
+                                            consents: { ...prev.consents, dataSharingChoice: e.target.value }
+                                        }))}
+                                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-3 text-slate-700">İzin Veriyorum</span>
+                                </label>
+                                <label className="flex items-center cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="dataSharing"
+                                        value="no"
+                                        checked={answers.consents.dataSharingChoice === 'no'}
+                                        onChange={(e) => setAnswers(prev => ({
+                                            ...prev,
+                                            consents: { ...prev.consents, dataSharingChoice: e.target.value }
+                                        }))}
+                                        className="w-4 h-4 text-blue-600 border-slate-300 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-3 text-slate-700">İzin Vermiyorum</span>
+                                </label>
+                            </div>
+                        </div>
+
+
                     </div>
                 )}
-            </div>
 
-            {/* Footer Navigation */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 shadow-lg">
-                <div className="max-w-2xl mx-auto flex justify-between items-center">
+                {/* Navigation Buttons */}
+                <div className="mt-8 flex justify-between items-center">
                     <button
                         onClick={handleBack}
-                        className="px-6 py-2 text-slate-500 font-medium hover:text-slate-800 transition-colors"
+                        className={`
+                            px-6 py-3 rounded-xl font-medium transition-all
+                            ${currentStep === 1
+                                ? 'text-slate-400 cursor-not-allowed'
+                                : 'text-slate-600 hover:bg-slate-100'
+                            }
+                        `}
+                        disabled={currentStep === 1}
                     >
                         Geri
                     </button>
 
                     <button
                         onClick={handleNext}
-                        disabled={
-                            (currentStep === 1 && answers.systemicDiseases.length === 0) ||
-                            (currentStep === 3 && answers.allergies.length === 0 && !answers.allergies.includes("Diğer")) ||
-                            (currentStep === 6 && (!answers.consents.kvkkApproved || !answers.consents.dentalConsentApproved))
-                        }
+                        disabled={currentStep === 6 && (!answers.consents.kvkkApproved || !answers.consents.dentalConsentApproved)}
                         className={`
-              flex items-center gap-2 px-8 py-3 rounded-xl font-semibold transition-all duration-200
-              ${(currentStep === 1 && answers.systemicDiseases.length === 0) ||
-                                (currentStep === 3 && answers.allergies.length === 0 && !answers.allergies.includes("Diğer")) ||
-                                (currentStep === 6 && (!answers.consents.kvkkApproved || !answers.consents.dentalConsentApproved))
-                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
+                            px-8 py-3 rounded-xl font-medium shadow-lg transition-all flex items-center gap-2
+                            ${currentStep === 6 && (!answers.consents.kvkkApproved || !answers.consents.dentalConsentApproved)
+                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
                             }
-            `}
+                        `}
                     >
                         {currentStep === 6 ? 'Tamamla' : 'Devam Et'}
                         <ChevronRight className="w-5 h-5" />
@@ -884,128 +989,60 @@ export default function Diagnosis() {
                 </div>
             </div>
 
-            {/* Modals */}
-            {activeModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-                    <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl">
-                        <div className="p-4 border-b border-slate-100 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-slate-800">
-                                {activeModal === 'kvkk' ? 'Aydınlatma Metni' : 'Onam Formu'}
-                            </h3>
-                            <button
-                                onClick={() => setActiveModal(null)}
-                                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+            {/* Modal */}
+            {
+                activeModal && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="text-lg font-bold text-slate-800">
+                                    {activeModal === 'kvkk' ? 'KVKK Aydınlatma Metni' : 'Diş Hekimliği Onam Formu'}
+                                </h3>
+                                <button
+                                    onClick={() => setActiveModal(null)}
+                                    className="text-slate-400 hover:text-slate-600"
+                                >
+                                    <X className="w-6 h-6" />
+                                </button>
+                            </div>
+
+                            <div
+                                className="p-6 overflow-y-auto flex-1 text-slate-600 text-sm leading-relaxed space-y-4"
+                                onScroll={handleScroll}
                             >
-                                <X className="w-5 h-5 text-slate-500" />
-                            </button>
-                        </div>
+                                {activeModal === 'kvkk' ? (
+                                    <div className="whitespace-pre-wrap">{KVKK_TEXT}</div>
+                                ) : (
+                                    <div className="whitespace-pre-wrap">{CONSENT_TEXT}</div>
+                                )}
+                            </div>
 
-                        <div
-                            ref={modalContentRef}
-                            onScroll={handleScroll}
-                            className="flex-1 overflow-y-auto p-6 text-sm text-slate-600 leading-relaxed whitespace-pre-wrap"
-                        >
-                            {activeModal === 'kvkk' ? KVKK_TEXT : CONSENT_TEXT}
-
-                            {/* Dynamic Fields for KVKK */}
-                            {activeModal === 'kvkk' && (
-                                <div className="mt-8 space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                    <div className="grid grid-cols-1 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Ad Soyad</label>
-                                            <div className="font-medium text-slate-800">{user?.name} {user?.surname}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">TCKN</label>
-                                            <input
-                                                type="text"
-                                                value={answers.consents.tckn}
-                                                onChange={(e) => setAnswers(prev => ({
-                                                    ...prev,
-                                                    consents: { ...prev.consents, tckn: e.target.value }
-                                                }))}
-                                                placeholder="TC Kimlik No Giriniz"
-                                                className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 outline-none"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Dynamic Fields for Consent */}
-                            {activeModal === 'consent' && (
-                                <div className="mt-8 space-y-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-800 mb-2">
-                                            Kişisel verilerimin paylaşılmasına izin...
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={answers.consents.dataSharingChoice}
-                                            onChange={(e) => setAnswers(prev => ({
-                                                ...prev,
-                                                consents: { ...prev.consents, dataSharingChoice: e.target.value }
-                                            }))}
-                                            placeholder='El yazınız ile "veriyorum" ya da "vermiyorum" yazınız'
-                                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 outline-none"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-800 mb-2">
-                                            Onay Beyanı
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={answers.consents.handwrittenConfirmation}
-                                            onChange={(e) => setAnswers(prev => ({
-                                                ...prev,
-                                                consents: { ...prev.consents, handwrittenConfirmation: e.target.value }
-                                            }))}
-                                            placeholder='El yazınız ile "okuduğumu anladım, kabul ediyorum" yazınız'
-                                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-blue-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4 text-xs text-slate-500">
-                                        <div>
-                                            <span className="font-bold">Tarih:</span> {new Date().toLocaleDateString('tr-TR')}
-                                        </div>
-                                        <div>
-                                            <span className="font-bold">Hasta:</span> {user?.name} {user?.surname}
-                                        </div>
-                                        <div>
-                                            <span className="font-bold">Telefon:</span> {user?.phone}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end">
-                            <button
-                                disabled={!hasScrolledToBottom || (activeModal === 'kvkk' && !answers.consents.tckn) || (activeModal === 'consent' && (!answers.consents.dataSharingChoice || !answers.consents.handwrittenConfirmation))}
-                                onClick={() => {
-                                    if (activeModal === 'kvkk') {
-                                        setAnswers(prev => ({ ...prev, consents: { ...prev.consents, kvkkApproved: true } }));
-                                    } else {
-                                        setAnswers(prev => ({ ...prev, consents: { ...prev.consents, dentalConsentApproved: true } }));
-                                    }
-                                    setActiveModal(null);
-                                }}
-                                className={`
-                                    px-6 py-2 rounded-lg font-bold transition-all
-                                    ${(!hasScrolledToBottom || (activeModal === 'kvkk' && !answers.consents.tckn) || (activeModal === 'consent' && (!answers.consents.dataSharingChoice || !answers.consents.handwrittenConfirmation)))
-                                        ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200'
-                                    }
+                            <div className="p-4 border-t border-slate-100 bg-slate-50 rounded-b-2xl flex justify-end">
+                                <button
+                                    onClick={() => {
+                                        if (activeModal === 'kvkk') {
+                                            setAnswers(prev => ({ ...prev, consents: { ...prev.consents, kvkkApproved: true } }));
+                                        } else {
+                                            setAnswers(prev => ({ ...prev, consents: { ...prev.consents, dentalConsentApproved: true } }));
+                                        }
+                                        setActiveModal(null);
+                                    }}
+                                    disabled={!hasScrolledToBottom}
+                                    className={`
+                                    px-6 py-2 rounded-lg font-medium transition-all
+                                    ${hasScrolledToBottom
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                                            : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                        }
                                 `}
-                            >
-                                Onayla ve Kapat
-                            </button>
+                                >
+                                    {hasScrolledToBottom ? 'Okudum, Onaylıyorum' : 'Lütfen metni sonuna kadar okuyunuz'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }
-

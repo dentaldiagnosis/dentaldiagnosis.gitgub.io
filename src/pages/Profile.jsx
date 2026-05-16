@@ -5,12 +5,12 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 export default function Profile() {
     const { user: currentUser, updateUser, users, updateSpecificUser } = useAuth();
-    const { phone } = useParams();
+    const { username } = useParams();
     const navigate = useNavigate();
 
     // Admin view check
-    const isAdminView = !!phone;
-    const targetUser = isAdminView ? users?.find(u => u.phone === phone) : currentUser;
+    const isAdminView = !!username;
+    const targetUser = isAdminView ? users?.find(u => u.username === username || u.phone === username) : currentUser;
 
     // Local state for personal info editing
     const [isEditingPersonal, setIsEditingPersonal] = useState(false);
@@ -22,9 +22,7 @@ export default function Profile() {
                 name: targetUser.name || '',
                 surname: targetUser.surname || '',
                 birthDate: targetUser.birthDate || '',
-                gender: targetUser.gender || '',
-                tckn: targetUser.tckn || '',
-                phone: targetUser.phone || ''
+                gender: targetUser.gender || ''
             });
         }
     }, [targetUser]);
@@ -39,11 +37,7 @@ export default function Profile() {
     const handlePersonalSave = () => {
         try {
             if (isAdminView) {
-                updateSpecificUser(targetUser.phone, personalData);
-                // If phone number changed, navigate to new URL to prevent "User not found" error
-                if (personalData.phone !== targetUser.phone) {
-                    navigate(`/admin/profile/${personalData.phone}`, { replace: true });
-                }
+                updateSpecificUser(targetUser.username || targetUser.phone, personalData);
             } else {
                 updateUser(personalData);
             }
@@ -141,19 +135,6 @@ export default function Profile() {
                                         )}
                                     </div>
 
-                                    <div>
-                                        <label className="text-xs text-slate-500 block mb-1">TC Kimlik No</label>
-                                        {isEditingPersonal ? (
-                                            <input
-                                                name="tckn"
-                                                value={personalData.tckn}
-                                                onChange={handlePersonalChange}
-                                                className="w-full p-2 border rounded text-sm"
-                                            />
-                                        ) : (
-                                            <div className="font-medium text-slate-800">{targetUser.tckn || '-'}</div>
-                                        )}
-                                    </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -188,19 +169,8 @@ export default function Profile() {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="text-xs text-slate-500 block mb-1">Telefon</label>
-                                        {isEditingPersonal ? (
-                                            <input
-                                                name="phone"
-                                                value={personalData.phone}
-                                                onChange={handlePersonalChange}
-                                                className="w-full p-2 border rounded text-sm"
-                                            />
-                                        ) : (
-                                            <div className="font-medium text-slate-800">{targetUser.phone}</div>
-                                        )}
-                                    </div>
+
+
                                 </div>
 
                                 <div className="pt-4">
@@ -259,7 +229,7 @@ export default function Profile() {
                                                 state: {
                                                     initialData: latestDiagnosis.data,
                                                     initialStep: 1,
-                                                    targetPhone: isAdminView ? targetUser.phone : null
+                                                    targetUsername: isAdminView ? (targetUser.username || targetUser.phone) : null
                                                 }
                                             })}
                                             className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
@@ -292,7 +262,7 @@ export default function Profile() {
                                                 state: {
                                                     initialData: latestDiagnosis.data,
                                                     initialStep: 3,
-                                                    targetPhone: isAdminView ? targetUser.phone : null
+                                                    targetUsername: isAdminView ? (targetUser.username || targetUser.phone) : null
                                                 }
                                             })}
                                             className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
@@ -323,7 +293,7 @@ export default function Profile() {
                                                 state: {
                                                     initialData: latestDiagnosis.data,
                                                     initialStep: 4,
-                                                    targetPhone: isAdminView ? targetUser.phone : null
+                                                    targetUsername: isAdminView ? (targetUser.username || targetUser.phone) : null
                                                 }
                                             })}
                                             className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
@@ -353,7 +323,7 @@ export default function Profile() {
                                                 state: {
                                                     initialData: latestDiagnosis.data,
                                                     initialStep: 5,
-                                                    targetPhone: isAdminView ? targetUser.phone : null
+                                                    targetUsername: isAdminView ? (targetUser.username || targetUser.phone) : null
                                                 }
                                             })}
                                             className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"

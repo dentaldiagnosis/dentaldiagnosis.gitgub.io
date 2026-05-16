@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Landing from './pages/Landing';
 import Register from './pages/Register';
@@ -11,6 +11,7 @@ import TreatmentPlanning from './pages/TreatmentPlanning';
 import PatientTreatment from './pages/PatientTreatment';
 import ProsthesisTracking from './pages/ProsthesisTracking';
 import AdminProsthesisUpdate from './pages/AdminProsthesisUpdate';
+import AccountDeleted from './pages/AccountDeleted';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PaymentTracking from './pages/PaymentTracking';
@@ -19,9 +20,14 @@ import SessionTimeout from './components/SessionTimeout';
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
   const { user } = useAuth();
+  const location = useLocation();
+
+  if (user && user.role === 'deleted' && location.pathname !== '/hesap-silindi') {
+    return <Navigate to="/hesap-silindi" replace />;
+  }
 
   if (!user) {
-    return <Navigate to="/giris" />;
+    return <Navigate to="/giris" replace />;
   }
 
   if (role && user.role !== role) {
@@ -83,26 +89,30 @@ function App() {
                 <AdminDashboard />
               </ProtectedRoute>
             } />
-            <Route path="/admin/treatment/:phone" element={
+            <Route path="/admin/treatment/:username" element={
               <ProtectedRoute role="admin">
                 <TreatmentPlanning />
               </ProtectedRoute>
             } />
-            <Route path="/admin/profile/:phone" element={
+            <Route path="/admin/profile/:username" element={
               <ProtectedRoute role="admin">
                 <Profile />
               </ProtectedRoute>
             } />
-            <Route path="/admin/protez-guncelle/:phone" element={
+            <Route path="/admin/protez-guncelle/:username" element={
               <ProtectedRoute role="admin">
                 <AdminProsthesisUpdate />
               </ProtectedRoute>
             } />
-            <Route path="/admin/odeme/:phone" element={
+            <Route path="/admin/odeme/:username" element={
               <ProtectedRoute role="admin">
                 <PaymentTracking />
               </ProtectedRoute>
             } />
+
+            <Route path="/hesap-silindi" element={<AccountDeleted />} />
+
+            {/* Catch all - redirect to landing */}
           </Routes>
         </div>
       </Router>

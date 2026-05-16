@@ -58,7 +58,7 @@ const CONDITIONS = [
 ];
 
 export default function TreatmentPlanning() {
-    const { phone } = useParams();
+    const { username } = useParams();
     const navigate = useNavigate();
     const { users, updateSpecificUser } = useAuth();
     const [selectedTooth, setSelectedTooth] = useState(null);
@@ -67,14 +67,14 @@ export default function TreatmentPlanning() {
     const [patient, setPatient] = useState(null);
 
     useEffect(() => {
-        const foundPatient = users?.find(u => u.phone === phone);
+        const foundPatient = users?.find(u => u.username === username || u.phone === username);
         if (foundPatient) {
             setPatient(foundPatient);
             if (foundPatient.treatmentPlan) {
                 setTreatmentPlan(foundPatient.treatmentPlan);
             }
         }
-    }, [users, phone]);
+    }, [users, username]);
 
     const handleToothClick = (toothNumber) => {
         setSelectedTooth(toothNumber);
@@ -125,7 +125,7 @@ export default function TreatmentPlanning() {
             };
 
             // Use updateSpecificUser to update the PATIENT'S data, not the admin's
-            updateSpecificUser(patient.phone, updatedPatient);
+            updateSpecificUser(patient.username || patient.phone, updatedPatient);
 
             // Update local patient state to reflect changes immediately
             setPatient(updatedPatient);

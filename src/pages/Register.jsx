@@ -1,24 +1,22 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus, ArrowLeft } from 'lucide-react';
 
 export default function Register() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { register } = useAuth();
     const [formData, setFormData] = useState({
         name: '',
         surname: '',
-        email: '',
         birthDate: '',
         gender: '',
-        tckn: '',
-        phone: '',
-        password: '',
-        confirmPassword: '',
         termsAccepted: false
     });
+    const [registeredCredentials, setRegisteredCredentials] = useState(null);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState(location.state?.autoDeleted ? 'Eski kaydınız başarıyla silindi. Şimdi yeni kaydınızı oluşturabilirsiniz.' : '');
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -28,25 +26,16 @@ export default function Register() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
-        if (formData.password !== formData.confirmPassword) {
-            setError('Şifreler eşleşmiyor.');
-            return;
-        }
-
-        // Password Strength Check
-        const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
-        if (!passwordRegex.test(formData.password)) {
-            setError('Şifreniz en az 8 karakter uzunluğunda olmalı, en az bir büyük harf ve bir rakam içermelidir.');
-            return;
-        }
-
         try {
-            register(formData);
-            navigate('/giris');
+            const newUserProfile = await register(formData);
+            setRegisteredCredentials({
+                username: newUserProfile.username,
+                password: newUserProfile.username
+            });
         } catch (err) {
             setError(err.message);
         }
@@ -61,6 +50,12 @@ export default function Register() {
                     </Link>
                     <h2 className="text-2xl font-bold text-slate-800 ml-4">Kayıt Ol</h2>
                 </div>
+
+                {successMessage && (
+                    <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4 text-sm font-medium border border-green-100">
+                        {successMessage}
+                    </div>
+                )}
 
                 {error && (
                     <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
@@ -94,19 +89,6 @@ export default function Register() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">E-posta Adresi</label>
-                        <input
-                            required
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            placeholder="ornek@email.com"
-                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                    </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Doğum Tarihi</label>
@@ -136,56 +118,6 @@ export default function Register() {
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">T.C. Kimlik No</label>
-                        <input
-                            required
-                            type="text"
-                            name="tckn"
-                            value={formData.tckn}
-                            onChange={handleChange}
-                            maxLength="11"
-                            placeholder="11 haneli T.C. Kimlik No"
-                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Telefon Numarası</label>
-                        <input
-                            required
-                            type="tel"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
-                            placeholder="0555 555 55 55"
-                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Şifre</label>
-                        <input
-                            required
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Şifre Tekrarı</label>
-                        <input
-                            required
-                            type="password"
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
-                        />
-                    </div>
 
                     <div className="flex items-center pt-2">
                         <input
@@ -211,6 +143,33 @@ export default function Register() {
                     </button>
                 </form>
             </div>
+
+            {registeredCredentials && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+                        <h3 className="text-xl font-bold text-slate-800 mb-2">Kayıt Başarılı!</h3>
+                        <p className="text-slate-600 mb-6 text-sm">Lütfen sisteme giriş yapmak için aşağıdaki bilgileri not ediniz. Bu bilgiler bir daha gösterilmeyecektir.</p>
+                        
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 space-y-3">
+                            <div>
+                                <span className="block text-xs font-medium text-slate-500 uppercase tracking-wider">Kullanıcı Adı</span>
+                                <span className="block text-lg font-bold text-blue-600">{registeredCredentials.username}</span>
+                            </div>
+                            <div className="border-t border-slate-200 pt-3">
+                                <span className="block text-xs font-medium text-slate-500 uppercase tracking-wider">Şifre</span>
+                                <span className="block text-lg font-bold text-blue-600">{registeredCredentials.password}</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors"
+                        >
+                            Devam Et
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

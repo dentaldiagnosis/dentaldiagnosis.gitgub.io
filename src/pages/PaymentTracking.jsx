@@ -4,12 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Check, Calendar, CreditCard, FileText, Save } from 'lucide-react';
 
 export default function PaymentTracking() {
-    const { phone } = useParams(); // If phone exists, it's admin view
+    const { username } = useParams(); // If username exists, it's admin view
     const navigate = useNavigate();
     const { user: currentUser, users, updateSpecificUser } = useAuth();
 
-    const isAdminView = !!phone;
-    const targetUser = isAdminView ? users?.find(u => u.phone === phone) : currentUser;
+    const isAdminView = !!username;
+    const targetUser = isAdminView ? users?.find(u => u.username === username || u.phone === username) : currentUser;
 
     const [paymentStatus, setPaymentStatus] = useState({});
     const [adminNotes, setAdminNotes] = useState('');
@@ -65,8 +65,8 @@ export default function PaymentTracking() {
             paymentNotes: adminNotes
         };
 
-        updateSpecificUser(targetUser.phone, updatedUser);
-        alert('Ödeme bilgileri kaydedildi.');
+        updateSpecificUser(targetUser.username || targetUser.phone, updatedUser);
+        alert('İşlem bilgileri kaydedildi.');
     };
 
     const formatDate = (isoString) => {
@@ -93,7 +93,7 @@ export default function PaymentTracking() {
                         <div>
                             <h1 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                                 <CreditCard className="w-6 h-6 text-blue-600" />
-                                Ödeme Takip
+                                İşlem Takip
                             </h1>
                             {isAdminView && (
                                 <p className="text-sm text-slate-500">
@@ -120,7 +120,7 @@ export default function PaymentTracking() {
                 {/* Treatment List */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 bg-slate-50">
-                        <h2 className="font-bold text-slate-800">Yapılan İşlemler ve Ödeme Durumu</h2>
+                        <h2 className="font-bold text-slate-800">Yapılan İşlemler ve Durumları</h2>
                     </div>
 
                     {treatmentItems.length > 0 ? (
@@ -215,7 +215,7 @@ export default function PaymentTracking() {
                             <textarea
                                 value={adminNotes}
                                 onChange={(e) => setAdminNotes(e.target.value)}
-                                placeholder="Ödeme veya tedavi ile ilgili notlar..."
+                                placeholder="İşlem veya tedavi ile ilgili notlar..."
                                 rows={4}
                                 className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
                             />

@@ -6,27 +6,27 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 export default function AdminProsthesisUpdate() {
     const { users, updateSpecificUser } = useAuth();
-    const { phone } = useParams();
+    const { username } = useParams();
     const navigate = useNavigate();
 
     const [targetUser, setTargetUser] = useState(null);
     const [currentStep, setCurrentStep] = useState(0);
 
     useEffect(() => {
-        if (users && phone) {
-            const foundUser = users.find(u => u.phone === phone);
+        if (users && username) {
+            const foundUser = users.find(u => u.username === username || u.phone === username);
             if (foundUser) {
                 setTargetUser(foundUser);
                 setCurrentStep(foundUser.prosthesisStep || 0);
             }
         }
-    }, [users, phone]);
+    }, [users, username]);
 
     const handleStepChange = (newStep) => {
         setCurrentStep(newStep);
         // Auto-save on change
         if (targetUser) {
-            updateSpecificUser(targetUser.phone, {
+            updateSpecificUser(targetUser.username || targetUser.phone, {
                 prosthesisStep: newStep
             });
         }
