@@ -1,0 +1,56 @@
+/* Ana kapsayıcı - Tüm ekranı kaplar ve kartı ortalar */
+.login-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background-color: #3b0712; /* Derin premium kiraz kırmızısı (cherry red) taban rengi */
+}
+
+/* Mozaik Grid Sistemi */
+.mosaic-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 20px;
+  padding: 20px;
+  z-index: 1;
+}
+
+/* Mobil Uyumlu Grid Düzeni */
+@media (max-width: 768px) {
+  .mosaic-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 12px;
+    padding: 12px;
+  }
+}
+
+/* Fotoğrafların tam net görünmesi için perdeyi hafiflettik ve cam buğusunu (blur) kaldırdık */
+.bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.35); /* %35 nötr transparan karartma perdesi (Fotoğrafların orijinal renk tonunu tamamen korur) */
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Sizin mevcuttaki beyaz kartınız en üstte kalmalı */
+.login-card-wrapper {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 440px;
+}

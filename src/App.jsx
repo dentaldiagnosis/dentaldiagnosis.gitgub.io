@@ -16,6 +16,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PaymentTracking from './pages/PaymentTracking';
 import SessionTimeout from './components/SessionTimeout';
+import SmileDesignModule from './pages/SmileDesignModule';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, role }) => {
@@ -80,6 +81,11 @@ function App() {
             <Route path="/odeme" element={
               <ProtectedRoute>
                 <PaymentTracking />
+              </ProtectedRoute>
+            } />
+            <Route path="/smile-design" element={
+              <ProtectedRoute>
+                <SmileDesignModule />
               </ProtectedRoute>
             } />
 
