@@ -1,7 +1,47 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Check, Calendar, CreditCard, FileText, Save } from 'lucide-react';
+import { ArrowLeft, Check, Calendar, CreditCard, FileText, Save, Plus, Trash2, Image as ImageIcon, X } from 'lucide-react';
+
+const compressImage = (file) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new window.Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 1024;
+                const MAX_HEIGHT = 1024;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                resolve(dataUrl);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
 
 export default function PaymentTracking() {
     const { username } = useParams(); // If username exists, it's admin view
@@ -13,11 +53,15 @@ export default function PaymentTracking() {
 
     const [paymentStatus, setPaymentStatus] = useState({});
     const [adminNotes, setAdminNotes] = useState('');
+    const [notesPhotos, setNotesPhotos] = useState([]);
+    const [selectedPhoto, setSelectedPhoto] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         if (targetUser) {
             setPaymentStatus(targetUser.paymentStatus || {});
             setAdminNotes(targetUser.paymentNotes || '');
+            setNotesPhotos(targetUser.notesPhotos || []);
         }
     }, [targetUser]);
 
@@ -62,11 +106,35 @@ export default function PaymentTracking() {
         const updatedUser = {
             ...targetUser,
             paymentStatus,
-            paymentNotes: adminNotes
+            paymentNotes: adminNotes,
+            notesPhotos: notesPhotos
         };
 
         updateSpecificUser(targetUser.username || targetUser.phone, updatedUser);
         alert('İşlem bilgileri kaydedildi.');
+    };
+
+    const handlePhotoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const base64Photo = await compressImage(file);
+            setNotesPhotos(prev => [...prev, base64Photo]);
+        } catch (error) {
+            console.error("Fotoğraf yükleme hatası:", error);
+            alert("Fotoğraf yüklenirken bir hata oluştu.");
+        } finally {
+            setIsUploading(false);
+            e.target.value = ''; // Reset input to allow selecting same file again
+        }
+    };
+
+    const handleDeletePhoto = (indexToDelete) => {
+        if (window.confirm('Bu fotoğrafı silmek istediğinize emin misiniz?')) {
+            setNotesPhotos(prev => prev.filter((_, index) => index !== indexToDelete));
+        }
     };
 
     const formatDate = (isoString) => {
@@ -184,26 +252,111 @@ export default function PaymentTracking() {
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                     <div className="p-6 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
                         <FileText className="w-5 h-5 text-slate-600" />
-                        <h2 className="font-bold text-slate-800">Notlar</h2>
+                        <h2 className="font-bold text-slate-800">Notlar ve Tedavi Görselleri</h2>
                     </div>
-                    <div className="p-6">
-                        {isAdminView ? (
-                            <textarea
-                                value={adminNotes}
-                                onChange={(e) => setAdminNotes(e.target.value)}
-                                placeholder="İşlem veya tedavi ile ilgili notlar..."
-                                rows={4}
-                                className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
-                            />
-                        ) : (
-                            <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 min-h-[100px] text-slate-700 whitespace-pre-wrap">
-                                {adminNotes || <span className="text-slate-400 italic">Henüz bir not eklenmemiş.</span>}
+                    <div className="p-6 space-y-6">
+                        {/* Text Notes */}
+                        <div>
+                            {isAdminView ? (
+                                <textarea
+                                    value={adminNotes}
+                                    onChange={(e) => setAdminNotes(e.target.value)}
+                                    placeholder="İşlem veya tedavi ile ilgili notlar..."
+                                    rows={4}
+                                    className="w-full p-4 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                                />
+                            ) : (
+                                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 min-h-[100px] text-slate-700 whitespace-pre-wrap">
+                                    {adminNotes || <span className="text-slate-400 italic">Henüz bir not eklenmemiş.</span>}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Divider */}
+                        <div className="border-t border-slate-100 pt-6">
+                            <h3 className="font-semibold text-slate-700 text-sm flex items-center gap-2 mb-4">
+                                <ImageIcon className="w-4 h-4 text-slate-500" />
+                                Tedavi Görselleri
+                                {isAdminView && <span className="text-xs font-normal text-slate-400">(Değişiklikleri kaydetmek için yukarıdaki Kaydet butonunu kullanın)</span>}
+                            </h3>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                {notesPhotos.map((photo, index) => (
+                                    <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-sm hover:shadow transition-all">
+                                        <img 
+                                            src={photo} 
+                                            alt={`Tedavi Görseli ${index + 1}`}
+                                            className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-transform duration-300"
+                                            onClick={() => setSelectedPhoto(photo)}
+                                        />
+                                        
+                                        {isAdminView && (
+                                            <button
+                                                onClick={() => handleDeletePhoto(index)}
+                                                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-1.5 rounded-lg shadow transition-colors"
+                                                title="Fotoğrafı Sil"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {isAdminView && (
+                                    <label className={`
+                                        border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl 
+                                        flex flex-col items-center justify-center cursor-pointer aspect-square p-4 
+                                        bg-slate-50 hover:bg-blue-50/20 transition-all text-slate-500 hover:text-blue-600
+                                        ${isUploading ? 'opacity-50 pointer-events-none' : ''}
+                                    `}>
+                                        <Plus className="w-8 h-8 mb-1.5" />
+                                        <span className="text-xs font-semibold text-center">
+                                            {isUploading ? 'Yükleniyor...' : 'Fotoğraf Ekle'}
+                                        </span>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            onChange={handlePhotoUpload} 
+                                            className="hidden" 
+                                            disabled={isUploading}
+                                        />
+                                    </label>
+                                )}
                             </div>
-                        )}
+
+                            {notesPhotos.length === 0 && !isAdminView && (
+                                <div className="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center border border-slate-100">
+                                    Henüz görsel eklenmemiş.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
             </main>
+
+            {/* Full Screen Photo Modal (Lightbox) */}
+            {selectedPhoto && (
+                <div 
+                    className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm transition-all cursor-pointer"
+                    onClick={() => setSelectedPhoto(null)}
+                >
+                    <div className="relative max-w-3xl max-h-[90vh] w-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                        <button
+                            onClick={() => setSelectedPhoto(null)}
+                            className="absolute -top-12 right-0 text-white hover:text-slate-200 bg-slate-800/50 hover:bg-slate-800/80 p-2 rounded-full transition-all"
+                            title="Kapat"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <img
+                            src={selectedPhoto}
+                            alt="Görsel Detayı"
+                            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
